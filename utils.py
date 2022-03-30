@@ -3,14 +3,20 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 
-def normalize_angles(th):
-    return np.arctan2(np.sin(th), np.cos(th))
-
 def tic():
     return time.time()
 
 def toc(tic):
     return time.time() - tic
+
+TIME = -1
+def delay(HZ):
+    global TIME
+    PREV_TIME = TIME
+    TIME = tic()
+    elapsed = TIME - PREV_TIME
+    dt = min(0, 1/HZ - elapsed)
+    time.sleep(dt)
 
 def save_plot(name, t, data):
     plt.figure()
@@ -38,6 +44,12 @@ def cap_value_at(d, big):
     if abs(d) > big:
         d = np.sign(d) * big
     return d
+
+def normalize_angles(th):
+    return (th + np.pi) % (2 * np.pi) - np.pi
+
+def to_rad(deg):
+    return deg / 180 * np.pi
 
 def abs_to_rel_pose(rob_pose, rel_pose):
     """
@@ -75,9 +87,3 @@ def rel_to_abs_pose(rob_pose, rel_pose):
     th = normalize_angles(rel_pose[2] + rob_pose[2])
     abs_pose = np.array([float(xy[0]), float(xy[1]), th])
     return abs_pose
-
-def angle_between(dxdy):
-    return np.arctan2(dxdy[1], dxdy[0])
-
-def to_rad(deg):
-    return deg / 180 * np.pi
