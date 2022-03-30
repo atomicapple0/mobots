@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <style>
+      img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 80%
+      }
+    </style>
+  </head>
+  <body>
+    <h1 align="center">Video Streaming Demonistration</h1>
+    <img id="bg" class="center" src="{{ url_for('video_feed') }}">
+  </body>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script>
+        /* 
+        Replace server url with actual hostname/ip and port of 
+        your python server 
+        */
+        console.log("start");
+        $(document).keydown(function (e) {
+          if (e.key == "q") {
+            console.log("pressed: " + e.key);
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", '//172.26.229.47:1111', true);
+            xhr.send('hello world');
+          }
+        });
+    </script>
+</html>
