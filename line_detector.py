@@ -5,6 +5,8 @@ from cv2_utils import *
 
 from skimage import filters
 
+WAYPOINTS = []
+
 class RowLines():
     def __init__(self, r, c_rngs):
         self.r = r
@@ -28,6 +30,7 @@ class RowLines():
                         curr_cntr = int(np.mean(c_rng))
                         prev_cntr = int(np.mean(prev_c_rng))
                         cv2.line(orig, (prev_cntr, prev_row_lines.r), (curr_cntr, self.r), (0, 255, 0), 3)
+                        WAYPOINTS.append((curr_cntr, self.r))
                         self.down_edges[i] = j
                         break
         print(self.c_rngs)
@@ -53,7 +56,7 @@ def draw_lines(orig, segmented, r):
             length = 0
     return lines
 
-img_idx = 0
+img_idx = 11
 while True:
     fname = f'test/{img_idx}.jpg'
     print(fname)
@@ -74,21 +77,25 @@ while True:
     thresh_val = np.percentile(crop, 90, axis=(0,1))
     print(thresh_val)
 
-    # accentuate curves
-    blur_new = cv2.blur(bgr2gray(orig), (25,25))
+    # sobel curves
+    blur_new = cv2.blur(gray, (5,5))
     edges = cv2.Sobel(blur_new,cv2.CV_8U,1,0,ksize=5)
-    edges[edges < np.percentile(edges, 98)] = 0
-    edges[edges >= np.percentile(edges, 98)] = 255
+    translation_matrix = np.float32([ [1,0,20], [0,1,0] ])
+    edges[edges < np.percentile(edges, 95)] = 0
+    edges[edges >= np.percentile(edges, 95)] = 255
     cv2_view(edges=edges)
-
-    blur[edges==255] = blur*1.3
-    blur = blur / np.max(blur)
-    cv2_view(edges=blur)
+    # shift right
+    edges[:,20:] = edges[:,:-20]
+    edges[:,:20] = 0
+    cv2_view(edges=edges)
+    edges = bin2gray(np.bitwise_and(blur_new > thresh_val, edges))
+    print('this is cool')
+    cv2_view(edges=edges)
     
     # globally segment lines generously
     val = filters.threshold_otsu(crop)
     _, thresh_init = cv2.threshold(gray,val-5,255,cv2.THRESH_BINARY)
-    gray[thresh_init==0] = 0
+    gray[np.bitwise_and(thresh_init==0, edges==0)] = 0
     cv2_view(thresh=thresh_init)
     cv2_view(blur=gray)
 
@@ -96,7 +103,7 @@ while True:
     print(np.std(gray), np.std(gray[thresh_init!=0]))
     val = filters.threshold_otsu(gray[thresh_init!=0])-10
     _, thresh_stray = cv2.threshold(gray,val,255,cv2.THRESH_BINARY)
-    gray[thresh_stray==0] = 0
+    gray[np.bitwise_and(thresh_stray==0, edges==0)] = 0
     cv2_view(thresh_stray=thresh_stray)
 
     # remove small segments
@@ -138,6 +145,10 @@ while True:
         rp = len(lines_by_row)-r-1
         lines_by_row[rp].draw_interrow_lines(orig, lines_by_row[rp+1])
 
+    for pt in WAYPOINTS:
+        cv2.circle(orig, (pt[0], pt[1]), 3, (255, 255, 0), -1)
+
+
     # through away connected segments with fewer than 10 points
 
     # cntr_pts = []
@@ -167,8 +178,6 @@ while True:
     # for line in lines:
     #     cv2.line(orig, (line[1], line[0]), (line[2], line[0]), (0, 0, 255), 1)
 
-    # for pt in cntr_pts:
-    #     cv2.circle(orig, (pt[0], pt[1]), 3, (0, 255, 0), -1)
 
 
 
@@ -204,5 +213,6 @@ while True:
     # # cv2.imshow("img",circ)
     # # cv2_wait()
     
+    cv2_view(orig=orig)
     cv2.imwrite('results/%d.jpg' % img_idx, orig)
     img_idx += 1
