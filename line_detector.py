@@ -11,52 +11,50 @@ while True:
     orig = cv2.imread(fname)
     if orig is None:
         break
-    orig = rescale(orig)
+    pix = 500
+    orig = rescale(orig, pix=pix)
     cv2_view(orig=orig)
 
     gray = bgr2gray(orig)
-    gray[:100,:] = np.mean(gray)
+    gray[:pix//5,:] = np.mean(gray)
     cv2_view(gray=gray)
-    blur = cv2.blur(gray, (10,10))
-    cv2_view(blur=blur)
+    gray = cv2.blur(gray, (10,10))
+    cv2_view(blur=gray)
 
-    crop = blur[-int(blur.shape[0]*.5):,:]
+    crop = gray[-int(gray.shape[0]*.5):,:]
     thresh_val = np.percentile(crop, 90, axis=(0,1))
     print(thresh_val)
     
     # globally segment lines generously
     val = filters.threshold_otsu(crop)
-    _, thresh_init = cv2.threshold(blur,val-5,255,cv2.THRESH_BINARY)
-    blur[thresh_init==0] = 0
+    _, thresh_init = cv2.threshold(gray,val-5,255,cv2.THRESH_BINARY)
+    gray[thresh_init==0] = 0
     cv2_view(thresh=thresh_init)
-    cv2_view(blur=blur)
-
-    # deal with brighter floor patches
-    # thresh_regions = thresh_init.copy()
-    # region_height = 100
-    # for i in range(blur.shape[0] // region_height + 1):
-    #     region = blur[i*region_height:min((i+1)*region_height,blur.shape[0]),:]
-    #     # std = np.std(region[region!=0])
-    #     # mean = np.mean(region[region!=0] - .2*std)
-    #     # region[region==0] = np.random.normal(loc=mean, scale=std)
-    #     # region[region==0] = np.random.randint(0,256)
-    #     region = np.where(region==0,np.random.randint(0,256,size=region.shape),region).astype(np.uint8)
-    #     val = calc_threshold(region)
-    #     print(val)
-    #     _, thresh_region = cv2.threshold(region,val,255,cv2.THRESH_BINARY)
-    #     thresh_regions[i*region_height:(i+1)*region_height,:] = thresh_region
-    # thresh_full = bin2gray(np.bitwise_and(thresh_regions==255, thresh_init==255))
-    # blur[thresh_full==0] = 0
-    # cv2_view(thresh_regions=thresh_regions)
-    # cv2_view(thresh_full=thresh_full)
-    # cv2_view(blur=blur)
+    cv2_view(blur=gray)
 
     # cleanup stray bits
-    val = filters.threshold_otsu(blur[thresh_init!=0])-5
-    _, thresh_stray = cv2.threshold(blur,val,255,cv2.THRESH_BINARY)
+    val = filters.threshold_otsu(gray[thresh_init!=0])-10
+    _, thresh_stray = cv2.threshold(gray,val,255,cv2.THRESH_BINARY)
+    gray[thresh_stray==0] = 0
     cv2_view(thresh_stray=thresh_stray)
 
-    binary = thresh_stray
+    # remove small segments
+    min_size = pix * pix / 250
+    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
+        gray, connectivity=8
+    )
+    sizes = stats[:, -1]
+    max_label = 1
+    for i in range(2, nb_components):
+        if sizes[i] < min_size:
+            gray[output == i] = 0
+
+    cv2_view(gray=gray)
+    gray = cv2.blur(gray, (5, 25))
+    gray[gray!=0] = 255
+
+    cv2_view(gray=gray)
+    binary = gray
 
 
     # crop = blur[-int(blur.shape[0]*.4):,:]
@@ -85,15 +83,7 @@ while True:
     # cv2.imshow('img', blur)
     # cv2_wait()
 
-    # min_size = 1000
-    # nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
-    #     blur, connectivity=8
-    # )
-    # sizes = stats[:, -1]
-    # max_label = 1
-    # for i in range(2, nb_components):
-    #     if sizes[i] < min_size:
-    #         blur[output == i] = 0
+    
     
     # print('blur remove small components')
     # cv2.imshow('img', blur)
