@@ -4,6 +4,54 @@ from cv2_utils import *
 
 from skimage import filters
 
+class RowLines():
+    def __init__(self, r, c_rngs):
+        self.r = r
+        self.c_rngs = c_rngs
+        self.down_edges = [-1 for _ in range(len(c_rngs))]
+    
+    def draw_lines(self, orig):
+        for c_rng in self.c_rngs:
+            cv2.line(orig, (c_rng[0], self.r), (c_rng[1], self.r), (0, 0, 255), 1)
+    
+    def draw_interrow_lines(self, orig, prev_row_lines):
+        for i in range(len(self.c_rngs)):
+            for j in range(len(prev_row_lines.c_rngs)):
+                c_rng = self.c_rngs[i]
+                prev_c_rng = prev_row_lines.c_rngs[j]
+                lo = max(c_rng[0], prev_c_rng[0])
+                hi = min(c_rng[1], prev_c_rng[1])
+                if lo < hi:
+                    num_overlaps = hi - lo
+                    if .8 * (c_rng[1] - c_rng[0]) < num_overlaps and .8 * (prev_c_rng[1] - prev_c_rng[0]) < num_overlaps:
+                        curr_cntr = int(np.mean(c_rng))
+                        prev_cntr = int(np.mean(prev_c_rng))
+                        cv2.line(orig, (prev_cntr, prev_row_lines.r), (curr_cntr, self.r), (0, 255, 0), 3)
+                        self.down_edges[i] = j
+                        break
+        print(self.c_rngs)
+        print(prev_row_lines.c_rngs)
+        print(self.down_edges)
+
+    def __repr__(self):
+        return f'row_lines({self.r}, {self.c_rngs})'
+
+def draw_lines(orig, segmented, r):
+    lines = []
+    line_start = -1
+    length = 0
+    for c in range(orig.shape[1]):
+        if line_start == -1:
+            line_start = c
+        if segmented[r, c] == 255:
+            length += 1
+        else:
+            if 15 < length:
+                lines.append((line_start, c-1))
+            line_start = -1
+            length = 0
+    return lines
+
 img_idx = 0
 while True:
     fname = f'test/{img_idx}.jpg'
@@ -33,6 +81,7 @@ while True:
     cv2_view(blur=gray)
 
     # cleanup stray bits
+    print(np.std(gray), np.std(gray[thresh_init!=0]))
     val = filters.threshold_otsu(gray[thresh_init!=0])-10
     _, thresh_stray = cv2.threshold(gray,val,255,cv2.THRESH_BINARY)
     gray[thresh_stray==0] = 0
@@ -55,93 +104,64 @@ while True:
 
     cv2_view(gray=gray)
     binary = gray
-
-
-    # crop = blur[-int(blur.shape[0]*.4):,:]
-    # thresh_val = np.percentile(crop, 90, axis=-1)
-    # print(thresh_val)
-
-    # th3 = cv2.adaptiveThreshold(bgr2gray(cv2.blur(img, (10,10))), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-    #         cv2.THRESH_BINARY,201,0)
-    # print('adaptive')
-    # cv2.imshow('img', th3)
-    # cv2_wait()
-
-    # thresh = np.all(np.percentile(crop, 90, axis=(0,1)) < blur, axis=-1).astype(np.uint8)*255
-    # # thresh = ((thresh_val < img) & (img < 255)).astype(np.uint8) * 255
-    # print('threshold')
-    # cv2.imshow('img', thresh)
-    # cv2_wait()
-
-    # blur = cv2.blur(thresh, (3, 6))
-    # print('blur')
-    # cv2.imshow('img', blur)
-    # cv2_wait()
-
-    # blur[blur > 0] = 255
-    # print('blur binarize')
-    # cv2.imshow('img', blur)
-    # cv2_wait()
-
     
-    
-    # print('blur remove small components')
-    # cv2.imshow('img', blur)
-    # cv2_wait()
+    # find midpoints
+    blur_new = cv2.blur(bgr2gray(orig), (25,25))
+    edges = cv2.Sobel(blur_new,cv2.CV_8U,1,0,ksize=5)
+    edges[edges < np.percentile(edges, 98)] = 0
+    edges[edges >= np.percentile(edges, 98)] = 255
+    cv2_view(edges=edges)
+    # for each line
+    # if too thick compared to previous, 
+    #   throw away points that are not white compared to previous line
 
-    # vert = cv2.blur(blur, (1, 20))
-    # vert[vert > 0] = 255
-    # print('blur vertically')
-    # cv2.imshow('img', vert)
-    # cv2_wait()
+    # if not many points around it, toss
+    # partition points into sets with dist less than 50
 
-    # nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
-    #     vert, connectivity=8
-    # )
-    # # stats is left, top, width, height, area
-    # max_label = 1
-    # for i in range(1, nb_components):
-    #     # top plus height
-    #     bottom_row = stats[i, 1] + stats[i, 3]
-    #     if bottom_row < img.shape[0] * .3:
-    #         vert[output == i] = 0
-    # vert[:int(vert.shape[0]*.1),:] = 0
-    # print('remove skyline and things near top')
-    # cv2.imshow('img', vert)
-    # cv2_wait()
-
-    # # within a 50 pix radius of that, if pixel color is in range, yes
-    # # rad = cv2.blur(vert, (25,50))
-    # # low_val = np.percentile(crop, 30)
-    # # high_val = np.percentile(crop, 60)
-    # # img = ((low_val < img) & (img < high_val))
-    # # vert[np.logical_and(img > 0, rad > 0)] = 255
-    # # print('bullshit')
-    # # cv2.imshow('img', vert)
-    # # cv2_wait()
-
-    # nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
-    #     vert, connectivity=8
-    # )
-    # sizes = stats[:, -1]
-    # max_label = 1
-    # max_size = sizes[1]
-    # for i in range(1, nb_components):
-    #     if sizes[i] > max_size:
-    #         max_label = i
-    #         max_size = sizes[i]
-    # largest = np.zeros(blur.shape).astype(np.uint8)
-    # largest[output == max_label] = 255
-    # centroid = tuple(centroids[max_label].astype(int))
-    # cv2.circle(largest, centroid, 10, (255, 255, 255), 1)
-    # print('grab largest component')
-    # cv2.imshow('img', largest)
-    # cv2_wait()
-
-    for r in range(0, orig.shape[0], 3):
-        draw_line(orig, binary, r)
-    print('fuckky')
+    lines_by_row = []
+    for r in range(0, orig.shape[0], 10):
+        lines_by_row.append(RowLines(r, draw_lines(orig, binary, r, edges)))
     cv2_view(final=orig)
+
+    for r in range(len(lines_by_row)):
+        lines_by_row[r].draw_lines(orig)
+
+    for r in range(1, len(lines_by_row)):
+        rp = len(lines_by_row)-r-1
+        lines_by_row[rp].draw_interrow_lines(orig, lines_by_row[rp+1])
+
+    # through away connected segments with fewer than 10 points
+
+    # cntr_pts = []
+    # for i, line in enumerate(flatten_array(lines_by_row)):
+    #     cntr_pts.append([int(np.mean(line[1:])), line[0]])
+    # cntr_pts = np.array(cntr_pts)
+
+    # new_lines = lines
+    # for i, line in enumerate(1, lines):
+    #     prev_line_thickness = lines[i-1][2] - lines[i-1][1]
+    #     line_thickness = lines[i][2] - lines[i][1]
+    #     new_lines.append(line_thickness / prev_line_thickness)
+
+    # count number of points within 5 pixels of pt in cntr_pts
+    # cntr_pts_new = []
+    # for i, pt in enumerate(cntr_pts):
+    #     count = 0
+    #     for j, pt2 in enumerate(cntr_pts):
+    #         if i != j:
+    #             if np.linalg.norm(pt-pt2) < 10:
+    #                 count += 1
+    #     print(count)
+    #     if 4 < count:
+    #         cntr_pts_new.append((pt[0], pt[1]))
+    # cntr_pts = np.array(cntr_pts_new)
+
+    # for line in lines:
+    #     cv2.line(orig, (line[1], line[0]), (line[2], line[0]), (0, 0, 255), 1)
+
+    # for pt in cntr_pts:
+    #     cv2.circle(orig, (pt[0], pt[1]), 3, (0, 255, 0), -1)
+
 
 
     # # lines = cv2.HoughLinesP(

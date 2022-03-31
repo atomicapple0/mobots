@@ -62,7 +62,7 @@ def rescale(img, pix=500):
     img_radius = np.min(img.shape[:2])
     return cv2.resize(img, dsize=(0, 0), fx=pix/img_radius, fy=pix/img_radius)
 
-def cv2_view(t=1, **kwargs):
+def cv2_view(t=0, **kwargs):
     for name,img in kwargs.items():
         print(f'displaying {name}')
         cv2.imshow('img', img)
@@ -79,14 +79,5 @@ def bgr2gray(img):
 def bin2gray(img):
     return img.astype(np.uint8) * 255
 
-def draw_line(orig, segmented, r):
-    length_threshold = 10
-    length = 0
-    for c in range(orig.shape[1]):
-        if segmented[r, c] == 255:
-            length += 1
-            if length_threshold < length:
-                orig[r, c] = (0, 0, 255)
-            
-        else:
-            length = 0
+def flatten_array(arr):
+    return [x for sublist in arr for x in sublist]
