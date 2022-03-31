@@ -1,4 +1,5 @@
 import cv2
+from cv2 import blur
 import numpy as np
 from cv2_utils import *
 
@@ -72,6 +73,17 @@ while True:
     crop = gray[-int(gray.shape[0]*.5):,:]
     thresh_val = np.percentile(crop, 90, axis=(0,1))
     print(thresh_val)
+
+    # accentuate curves
+    blur_new = cv2.blur(bgr2gray(orig), (25,25))
+    edges = cv2.Sobel(blur_new,cv2.CV_8U,1,0,ksize=5)
+    edges[edges < np.percentile(edges, 98)] = 0
+    edges[edges >= np.percentile(edges, 98)] = 255
+    cv2_view(edges=edges)
+
+    blur[edges==255] = blur*1.3
+    blur = blur / np.max(blur)
+    cv2_view(edges=blur)
     
     # globally segment lines generously
     val = filters.threshold_otsu(crop)
@@ -106,11 +118,7 @@ while True:
     binary = gray
     
     # find midpoints
-    blur_new = cv2.blur(bgr2gray(orig), (25,25))
-    edges = cv2.Sobel(blur_new,cv2.CV_8U,1,0,ksize=5)
-    edges[edges < np.percentile(edges, 98)] = 0
-    edges[edges >= np.percentile(edges, 98)] = 255
-    cv2_view(edges=edges)
+
     # for each line
     # if too thick compared to previous, 
     #   throw away points that are not white compared to previous line
@@ -120,7 +128,7 @@ while True:
 
     lines_by_row = []
     for r in range(0, orig.shape[0], 10):
-        lines_by_row.append(RowLines(r, draw_lines(orig, binary, r, edges)))
+        lines_by_row.append(RowLines(r, draw_lines(orig, binary, r)))
     cv2_view(final=orig)
 
     for r in range(len(lines_by_row)):
