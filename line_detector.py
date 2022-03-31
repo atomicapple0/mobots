@@ -10,33 +10,42 @@ def cv2_wait():
     if key == ord("q"):
         exit()
 
-img_idx = 2
+img_idx = 0
 while True:
     print(img_idx)
     img = cv2.imread(f'test/{img_idx}.jpg', cv2.IMREAD_GRAYSCALE)
     if img is None:
         break
     img = rescale(img)
+    print('img')
     cv2.imshow('img', img)
     cv2_wait()
 
-    crop = img[-100:,:]
-    thresh_val = np.percentile(crop, 95)
+    img = cv2.blur(img, (3,3))
+    print('blur init')
+    cv2.imshow('img', img)
+    cv2_wait()
+
+    crop = img[-int(img.shape[0]*.4):,:]
+    thresh_val = np.percentile(crop, 90)
     print(thresh_val)
     
     thresh = ((thresh_val < img) & (img < 255)).astype(np.uint8) * 255
+    print('threshold')
     cv2.imshow('img', thresh)
     cv2_wait()
 
-    blur = cv2.blur(thresh, (5, 5))
+    blur = cv2.blur(thresh, (3, 6))
+    print('blur')
     cv2.imshow('img', blur)
     cv2_wait()
 
     blur[blur > 0] = 255
+    print('blur binarize')
     cv2.imshow('img', blur)
     cv2_wait()
 
-    min_size = 300  
+    min_size = 1000
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
         blur, connectivity=8
     )
@@ -46,19 +55,40 @@ while True:
         if sizes[i] < min_size:
             blur[output == i] = 0
     
+    print('blur remove small components')
     cv2.imshow('img', blur)
     cv2.waitKey(0)
 
-    kernel_size = 30
-    kernel_v = np.zeros((kernel_size, kernel_size))
-    kernel_v[:, int((kernel_size - 1)/2)] = np.ones(kernel_size)
-    kernel_v /= kernel_size
-    vert = cv2.filter2D(blur, -1, kernel_v)
+    vert = cv2.blur(blur, (1, 20))
     vert[vert > 0] = 255
-    print(kernel_v)
+    print('blur vertically')
     cv2.imshow('img', vert)
     cv2_wait()
 
+    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
+        vert, connectivity=8
+    )
+    # stats is left, top, width, height, area
+    max_label = 1
+    for i in range(1, nb_components):
+        # top plus height
+        bottom_row = stats[i, 1] + stats[i, 3]
+        if bottom_row < img.shape[0] * .3:
+            vert[output == i] = 0
+    vert[:int(vert.shape[0]*.1),:] = 0
+    print('remove skyline and things near top')
+    cv2.imshow('img', vert)
+    cv2_wait()
+
+    # within a 50 pix radius of that, if pixel color is in range, yes
+    # rad = cv2.blur(vert, (25,50))
+    # low_val = np.percentile(crop, 30)
+    # high_val = np.percentile(crop, 60)
+    # img = ((low_val < img) & (img < high_val))
+    # vert[np.logical_and(img > 0, rad > 0)] = 255
+    # print('bullshit')
+    # cv2.imshow('img', vert)
+    # cv2_wait()
 
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
         vert, connectivity=8
@@ -66,7 +96,7 @@ while True:
     sizes = stats[:, -1]
     max_label = 1
     max_size = sizes[1]
-    for i in range(2, nb_components):
+    for i in range(1, nb_components):
         if sizes[i] > max_size:
             max_label = i
             max_size = sizes[i]
@@ -74,12 +104,10 @@ while True:
     largest[output == max_label] = 255
     centroid = tuple(centroids[max_label].astype(int))
     cv2.circle(largest, centroid, 10, (255, 255, 255), 1)
+    print('grab largest component')
     cv2.imshow('img', largest)
     cv2_wait()
 
-    edges = cv2.Canny(blur, 100, 200)
-    cv2.imshow('img', edges)
-    cv2_wait()
 
     # lines = cv2.HoughLinesP(
     #     edges, # Input edge image
@@ -113,4 +141,6 @@ while True:
     # cv2.imshow("img",circ)
     # cv2_wait()
     
+    out = vert
+    cv2.imwrite('results/%d.jpg' % img_idx, out)
     img_idx += 1
