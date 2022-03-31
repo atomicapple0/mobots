@@ -15,7 +15,7 @@ def delay(HZ):
     PREV_TIME = TIME
     TIME = tic()
     elapsed = TIME - PREV_TIME
-    dt = min(0, 1/HZ - elapsed)
+    dt = max(0, 1/HZ - elapsed)
     time.sleep(dt)
 
 def save_plot(name, t, data):

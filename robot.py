@@ -3,6 +3,8 @@ import numpy as np
 import time
 import brickpi3
 
+np.set_printoptions(precision=1)
+
 # Params
 INF = 10000000
 WHEEL_BASE_DIAMETER = 6.75 # inches
@@ -38,7 +40,6 @@ class Robot():
 
         self.encs[self.IDX,0] = BP.get_motor_encoder(LEFT_MOTOR_PORT)
         self.encs[self.IDX,1] = BP.get_motor_encoder(RIGHT_MOTOR_PORT)
-        self.lghts[self.IDX] = BP.get_sensor(BP.PORT_1)
         self.curr_pows = [0, 0]
         self.pows[self.IDX,:] = self.curr_pows
         self.t[self.IDX] = 0
@@ -51,7 +52,6 @@ class Robot():
         # process sensor data
         self.encs[self.IDX,0] = BP.get_motor_encoder(LEFT_MOTOR_PORT)
         self.encs[self.IDX,1] = BP.get_motor_encoder(RIGHT_MOTOR_PORT)
-        self.lghts[self.IDX] = BP.get_sensor(BP.PORT_1)
         self.pows[self.IDX,:] = self.curr_pows
 
         # always check directionaility of encoder integration!!!
@@ -66,15 +66,12 @@ class Robot():
         self.rob_poses[self.IDX,1] = self.rob_poses[self.IDX-1,1] + ds*np.sin(self.rob_poses[self.IDX,2])
         self.rob_poses[self.IDX,2] = self.rob_poses[self.IDX-1,2] + dth
 
-        # print('[ODOMETRY] ' + str(self.rob_poses[self.IDX]))
+        print('[ODOMETRY] %s, [LGHT] %d, [POWS] %s' % (str(self.rob_poses[self.IDX]), self.lghts[self.IDX], str(self.pows[self.IDX])))
         self.IDX += 1
         return ds, dth
 
     def get_pose(self,idx=0):
         return self.rob_poses[self.IDX+idx-1]
-
-    def get_lght(self,idx=0):
-        return self.lghts[self.IDX+idx-1]
 
     def send_power_pair(self, l_pow, r_pow):
         wasLimited = False
@@ -90,8 +87,8 @@ class Robot():
             wasLimited = True
         self.curr_pows = [l_pow, r_pow]
         # print('[MOTOR POWERS] ' + str((l_pow, r_pow)) + (' (LIMITED!)' if wasLimited else ''))
-        self.BP.set_motor_power(LEFT_MOTOR_PORT, l_pow)
-        self.BP.set_motor_power(RIGHT_MOTOR_PORT, r_pow)
+        self.BP.set_motor_power(LEFT_MOTOR_PORT, -l_pow)
+        self.BP.set_motor_power(RIGHT_MOTOR_PORT, -r_pow)
     
     def stop(self):
         self.send_power_pair(0, 0)
