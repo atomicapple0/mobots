@@ -32,7 +32,7 @@ class Camera(object):
         if not os.path.exists('imgs'):
             os.makedirs('imgs')
         while True:
-            fname = 'imgs/%02d.png' % idx
+            fname = 'imgs/%d.png' % idx
             if not os.path.exists(fname):
                 cv2.imwrite(fname, image)
                 print('saved: ' + fname)
