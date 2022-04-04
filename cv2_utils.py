@@ -65,8 +65,8 @@ def rescale(img, pix=500):
 def cv2_view(t=0, **kwargs):
     for name,img in kwargs.items():
         print(f'displaying {name}')
-        cv2.imshow('img', img)
-        cv2_wait(t)
+        # cv2.imshow('img', img)
+        # cv2_wait(t)
 
 def cv2_wait(t=0):
     key = cv2.waitKey(t) & 0xFF

@@ -1,11 +1,15 @@
 import cv2
-from cv2 import blur
 import numpy as np
 from cv2_utils import *
 
 from skimage import filters
 
-WAYPOINTS = []
+# todo: find largest connected component on line graph
+# draw arrow
+# should we draw second line? if tip is below .5 height
+# can we draw second line? 
+# test angles in cone and see if we can fit at least 30% of remaining waypoint within 30 pix of line segment
+# from tip of that, draw second line if possible
 
 class RowLines():
     def __init__(self, r, c_rngs):
@@ -30,7 +34,6 @@ class RowLines():
                         curr_cntr = int(np.mean(c_rng))
                         prev_cntr = int(np.mean(prev_c_rng))
                         cv2.line(orig, (prev_cntr, prev_row_lines.r), (curr_cntr, self.r), (0, 255, 0), 3)
-                        WAYPOINTS.append((curr_cntr, self.r))
                         self.down_edges[i] = j
                         break
         print(self.c_rngs)
@@ -50,14 +53,20 @@ def draw_lines(orig, segmented, r):
         if segmented[r, c] == 255:
             length += 1
         else:
-            if 15 < length:
-                lines.append((line_start, c-1))
+            if 10 < length:
+                if lines and line_start - lines[-1][-1] < 20:
+                    lines[-1][-1] = c-1
+                else:
+                    lines.append([line_start, c-1])
             line_start = -1
             length = 0
+    print(r, lines)
     return lines
 
-img_idx = 11
+img_idx = 0
 while True:
+
+    WAYPOINTS = []
     fname = f'test/{img_idx}.jpg'
     print(fname)
     orig = cv2.imread(fname)
@@ -76,26 +85,11 @@ while True:
     crop = gray[-int(gray.shape[0]*.5):,:]
     thresh_val = np.percentile(crop, 90, axis=(0,1))
     print(thresh_val)
-
-    # sobel curves
-    blur_new = cv2.blur(gray, (5,5))
-    edges = cv2.Sobel(blur_new,cv2.CV_8U,1,0,ksize=5)
-    translation_matrix = np.float32([ [1,0,20], [0,1,0] ])
-    edges[edges < np.percentile(edges, 95)] = 0
-    edges[edges >= np.percentile(edges, 95)] = 255
-    cv2_view(edges=edges)
-    # shift right
-    edges[:,20:] = edges[:,:-20]
-    edges[:,:20] = 0
-    cv2_view(edges=edges)
-    edges = bin2gray(np.bitwise_and(blur_new > thresh_val, edges))
-    print('this is cool')
-    cv2_view(edges=edges)
     
     # globally segment lines generously
     val = filters.threshold_otsu(crop)
     _, thresh_init = cv2.threshold(gray,val-5,255,cv2.THRESH_BINARY)
-    gray[np.bitwise_and(thresh_init==0, edges==0)] = 0
+    gray[thresh_init==0] = 0
     cv2_view(thresh=thresh_init)
     cv2_view(blur=gray)
 
@@ -103,11 +97,11 @@ while True:
     print(np.std(gray), np.std(gray[thresh_init!=0]))
     val = filters.threshold_otsu(gray[thresh_init!=0])-10
     _, thresh_stray = cv2.threshold(gray,val,255,cv2.THRESH_BINARY)
-    gray[np.bitwise_and(thresh_stray==0, edges==0)] = 0
+    gray[thresh_stray==0] = 0
     cv2_view(thresh_stray=thresh_stray)
 
     # remove small segments
-    min_size = pix * pix / 250
+    min_size = 1000
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(
         gray, connectivity=8
     )
@@ -121,8 +115,8 @@ while True:
     gray = cv2.blur(gray, (5, 25))
     gray[gray!=0] = 255
 
-    cv2_view(gray=gray)
     binary = gray
+    cv2_view(binary=binary)
     
     # find midpoints
 
@@ -134,19 +128,39 @@ while True:
     # partition points into sets with dist less than 50
 
     lines_by_row = []
-    for r in range(0, orig.shape[0], 10):
+    for r in range(0, orig.shape[0], 5):
         lines_by_row.append(RowLines(r, draw_lines(orig, binary, r)))
     cv2_view(final=orig)
 
-    for r in range(len(lines_by_row)):
-        lines_by_row[r].draw_lines(orig)
+    for line_by_row in lines_by_row:
+        for i in range(len(line_by_row.c_rngs)):
+            c_lo = line_by_row.c_rngs[i][0]
+            c_hi = line_by_row.c_rngs[i][1]
+            WAYPOINTS.append((int(np.mean([c_lo, c_hi])), line_by_row.r))
+            print(line_by_row.r, [int(np.mean([c_lo, c_hi])), line_by_row.r], line_by_row.c_rngs)
+            print(len(WAYPOINTS))
+        line_by_row.draw_lines(orig)
 
-    for r in range(1, len(lines_by_row)):
-        rp = len(lines_by_row)-r-1
-        lines_by_row[rp].draw_interrow_lines(orig, lines_by_row[rp+1])
+    print(len(WAYPOINTS))
+    # for r in range(1, len(lines_by_row)):
+    #     rp = len(lines_by_row)-r-1
+    #     lines_by_row[rp].draw_interrow_lines(orig, lines_by_row[rp+1])
 
-    for pt in WAYPOINTS:
+    for i in range(len(WAYPOINTS)):
+        pt = WAYPOINTS[i]
+        print(pt)
         cv2.circle(orig, (pt[0], pt[1]), 3, (255, 255, 0), -1)
+
+    robot_reference_row = int(orig.shape[0] * 7/8)
+    robot_traj_row = int(orig.shape[0] * 5/8)
+    bottom_4th = np.array([[c,r] for (c,r) in WAYPOINTS if r > orig.shape[0]*.75])
+    bottom_3_4ths = np.array([[c,r] for (c,r) in WAYPOINTS if orig.shape[0]*.5 < r < orig.shape[0]*.75])
+    robot_reference_col = np.mean(bottom_4th[:,0])
+    robot_traj_col = np.mean(bottom_3_4ths[:,0])
+
+    print(robot_reference_col, robot_reference_row)
+
+    cv2.arrowedLine(orig, (int(robot_reference_col), robot_reference_row), (int(robot_traj_col), robot_traj_row), (0, 255, 255), 10)
 
 
     # through away connected segments with fewer than 10 points
