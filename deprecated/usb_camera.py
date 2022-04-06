@@ -7,23 +7,14 @@ class Camera(object):
         self.width = int(self.video.get(3))
         self.height = int(self.video.get(4))
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.writer = cv2.VideoWriter(
-            'static/output.avi',
-            fourcc, 
-            24., 
-            (self.width, self.height)
-        )
         print('Created camera object')
     
     def __del__(self):
         print('Freeing resources')
         self.video.release()
-        self.writer.release()
 
-    def get_image(self, write=False):
+    def get_image(self):
         _, image = self.video.read()
-        if write:
-            self.writer.write(image)
         return image
 
     def screenshot(self):
