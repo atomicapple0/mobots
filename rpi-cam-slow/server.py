@@ -11,7 +11,7 @@ from http import server
 
 import sys
 sys.path.append('../')
-from line_detection import track_line
+from detect_line import detect_line
 
 print("Running sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
 os.system("sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
@@ -78,7 +78,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.end_headers()
                     try:
                         img = cv2.imdecode(np.fromstring(frame, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-                        # img = track_line(img)
+                        img, _ = detect_line(img)
                         frame = cv2.imencode('.jpg', img)[1].tostring()
                     except Exception as e:
                         print(e)

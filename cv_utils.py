@@ -56,8 +56,14 @@ def cv2_wait(t=0):
 def bgr2gray(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+def gray2bgr(img):
+    return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
 def bgr2rgb(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+def bgr2hsv(img):
+    return cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
 def bin2gray(img):
     return img.astype(np.uint8) * 255
