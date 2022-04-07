@@ -1,5 +1,9 @@
+import sys
+sys.path.append('../')
+
 import cv2
 import os
+from line_detection import track_line
 
 class Camera(object):
     def __init__(self):
@@ -14,6 +18,7 @@ class Camera(object):
 
     def get_image(self):
         _, image = self.video.read()
+        # image = track_line(image)
         return image
 
     def screenshot(self):

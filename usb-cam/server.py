@@ -14,7 +14,7 @@ def index():
 
 def gen():
     while True:
-        image = camera.get_image(write=True)
+        image = camera.get_image()
         _, jpeg = cv2.imencode('.jpg', image)
         jpeg = jpeg.tobytes()
         yield (b'--frame\r\n'

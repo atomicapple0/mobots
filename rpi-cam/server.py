@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-import sys
 import io
 import os
-import shutil
+import re
 from subprocess import Popen, PIPE
 from string import Template
 from struct import Struct
@@ -33,7 +32,7 @@ for line in out.split('\n'):
     os.system("pkill %s" % pid)
     print("pkill %s" % pid)
 print("\n")
-print("Starting stream at http://172.26.229.47:2222")
+print("Starting stream at http://172.26.229.47:8082")
 
 ###########################################
 # CONFIGURATION

@@ -14,10 +14,14 @@ import RPi.GPIO as GPIO
 #    |                MC
 #    |_______S3_S4_MD_|
 #
-#      ________WA_ 
+#    Servo Pinouts:
+#      - Forklift Servo 1: Gray (5V), White (GND), Black (GPIO14)
+#      - Clamp Servo 2: Purple (5V), Blue (GND), Green (GPIO15)
+#
+#      _WB_____WA_ 
 #     | Robot   ..|
 #     |        \__/  -> (Bearing)
-#     |________WD_| 
+#     |_WC_____WD_| 
 #
 #########################################################################
 
@@ -34,12 +38,18 @@ BP.reset_all()
 
 # MOTORS
 # Convention: [forward port, backward port]
-LEFT_MOTOR_PORTS = [BP.PORT_A]
-LEFT_MOTOR_DIRECTIONALITY = [1]
-RIGHT_MOTOR_PORTS = [BP.PORT_D]
-RIGHT_MOTOR_DIRECTIONALITY = [1]
+LEFT_MOTOR_PORTS = [BP.PORT_C]
+LEFT_MOTOR_DIRECTIONALITY = [1, -1]
+RIGHT_MOTOR_PORTS = [BP.PORT_B]
+RIGHT_MOTOR_DIRECTIONALITY = [1, -1]
 for port in LEFT_MOTOR_PORTS + RIGHT_MOTOR_PORTS:
     BP.offset_motor_encoder(port, port)
+
+# SENSORS
+ULTRASONIC_PORT = BP.PORT_4
+LIGHT_PORT = BP.PORT_3
+BP.set_sensor_type(ULTRASONIC_PORT, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.set_sensor_type(LIGHT_PORT, BP.SENSOR_TYPE.NXT_LIGHT_ON)
 
 class Robot():
     def __init__(self, init_pose=[0,0,0]):
@@ -62,6 +72,18 @@ class Robot():
 
         self.IDX += 1
         print('[ROBOT READY]')
+    
+    def get_light(self):
+        try:
+            return BP.get_sensor(LIGHT_PORT)
+        except:
+            return -1
+
+    def get_ultrasonic(self):
+        try:
+            return BP.get_sensor(ULTRASONIC_PORT)
+        except:
+            return -1
     
     def step(self):
         self.encs[self.IDX,0] = BP.get_motor_encoder(LEFT_MOTOR_PORTS[0])
