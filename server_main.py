@@ -8,10 +8,8 @@ import logging
 import socketserver
 from threading import Condition
 from http import server
-
-import sys
-sys.path.append('../')
-from detect_line import detect_line
+from detect_line import *
+from robot import *
 
 print("Running sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
 os.system("sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
@@ -27,8 +25,11 @@ for line in out.split('\n'):
 print("\n")
 print("Starting stream at http://172.26.229.47:4444/index.html")
 
-with open("index.html") as f:
+with open("./rpi-cam-slow/index.html") as f:
     PAGE = f.read()
+
+R = Robot()
+errs = []
 
 class StreamingOutput(object):
     def __init__(self):
@@ -78,8 +79,37 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.end_headers()
                     try:
                         img = cv2.imdecode(np.fromstring(frame, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-                        img, _ = detect_line(img)
+                        img, blobs = detect_line(img)
                         frame = cv2.imencode('.jpg', img)[1].tostring()
+                        # random shit here:
+                        # for blob in blobs:
+                        #     print(blob)
+                        if blobs:
+                            blob = blobs[-1]
+                            err = CENTER_COL - blob.center
+                            errs.append(err)
+
+                            if -50 < err < 50: # good zone
+                                print('straight', end=' ')
+                            elif err < 0: # we need to turn left
+                                print('left', end=' ')
+                            elif err >= 0: # we need to turn right
+                                print('right', end=' ')
+
+                            p_err = errs[-1]
+                            d_err = errs[-1] - errs[-2]
+                            i_err = sum(errs[max(len(errs)-100,0):]) / len(errs)
+
+                            k_p, k_d, k_i = 0, 0, 0
+                            k_p = 20 / 100
+                            # k_i = 1 / RESOLUTION[0] / 2
+                            # k_d = 1 / RESOLUTION[0] / 2
+                            W = k_p * p_err + k_d * d_err + k_i * i_err
+
+                            print(f'p_err: {p_err}, W: {W}')
+                            V = 25
+                            R.send_power_pair(V+W, V-W)
+
                     except Exception as e:
                         print(e)
                     self.wfile.write(frame)
