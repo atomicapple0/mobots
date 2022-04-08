@@ -6,27 +6,12 @@ R = Robot()
 ERRS = [0]
 LOST_TRACK = 0
 LEFT, RIGHT = 0, 1
-TURNS = [LEFT, LEFT, RIGHT, RIGHT, RIGHT, LEFT, RIGHT]
-# TURNS = [RIGHT, LEFT, RIGHT, LEFT, RIGHT, LEFT, RIGHT]
+TURNS = [RIGHT, LEFT, RIGHT, RIGHT, LEFT, RIGHT, LEFT]
 # TURNS = [LEFT]
 FORK_NUM = 0
 OPEN_TO_CHANGING_PREFERENCE = 0
 PREV_BLOBS = None
 PREV_BLOB_CHOICE = 0
-
-# todo:
-# figure out which blob to use
-# if two blobs
-# check if they are from "splitting" previous frame
-# if not, ignore
-# no_op until they exist for a couple frames (?)
-# incr number of forks after they dissapear for a couple frames (?)
-# figure out which fork we are at
-# start looking for forks again after a few seconds
-
-# estimate pixel width of track
-# estimate pixel width of diverge
-# estimate pixel width of straight
 
 def pid(blobs):
     global ERRS, LOST_TRACK, LEFT, RIGHT, TURNS, FORK_NUM, OPEN_TO_CHANGING_PREFERENCE, PREV_BLOBS, PREV_BLOB_CHOICE
@@ -69,12 +54,9 @@ def pid(blobs):
         err = CENTER_COL - blob.center
         ERRS.append(err)
 
-        trailing_window = ERRS[max(len(ERRS)-10,0):]
-        trailing_abs_err = np.mean(np.abs(trailing_window)) 
-
         p_err = ERRS[-1]
         d_err = ERRS[-1] - ERRS[-2]
-        i_err = np.mean(trailing_window)
+        i_err = np.mean(ERRS[max(len(ERRS)-10,0):])
 
         k_p, k_d, k_i = 0, 0, 0
         k_p = 40 / 100
@@ -91,7 +73,7 @@ def pid(blobs):
         elif abs(p_err) < 40:
             # V = 30
             if FORK_NUM < 1:
-                V = 70
+                V = 75
             else:
                 V = 60
     else:
