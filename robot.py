@@ -27,7 +27,7 @@ import RPi.GPIO as GPIO
 
 # PARAMS
 INF = 10000000
-WHEEL_BASE_DIAMETER = 6.75 # inches
+WHEEL_BASE_DIAMETER = 6 # inches
 WHEEL_DIAMETER = 3.25 # inches
 TICKS_PER_REV = 360
 
@@ -108,6 +108,15 @@ class Robot(object):
 
     def get_pose(self,idx=0):
         return self.rob_poses[self.IDX+idx-1]
+    
+    def get_velocity(self):
+        dt = 10
+        if self.IDX < dt:
+            dt = self.IDX
+        dl = (self.encs[self.IDX,0] - self.encs[self.IDX-dt,0]) / float(TICKS_PER_REV) * WHEEL_DIAMETER * np.pi
+        dr = (self.encs[self.IDX,1] - self.encs[self.IDX-dt,1]) / float(TICKS_PER_REV) * WHEEL_DIAMETER * np.pi
+        ds = (dl + dr) / 2 / dt
+        return ds
 
     def send_power_pair(self, l_pow, r_pow):
         if self.curr_pows[0] < l_pow:
