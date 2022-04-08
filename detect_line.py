@@ -47,7 +47,7 @@ def detect_line(img):
     val = hsv[:,:,2]
     val = cv2.GaussianBlur(val,(7,7),0)
     # min_thresh_val = 140
-    min_thresh_val = 0
+    min_thresh_val = 90
     thresh_val = max(otsu(val[ROW_LO-WINDOW_SIZE//2:ROW_HI+WINDOW_SIZE//2,:]), min_thresh_val)
     # print(f'thresh_val: {thresh_val}')
     _, thresh = cv2.threshold(val,thresh_val,255,cv2.THRESH_BINARY)
