@@ -51,7 +51,7 @@ LIGHT_PORT = BP.PORT_3
 BP.set_sensor_type(ULTRASONIC_PORT, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 BP.set_sensor_type(LIGHT_PORT, BP.SENSOR_TYPE.NXT_LIGHT_ON)
 
-class Robot():
+class Robot(object):
     def __init__(self, init_pose=[0,0,0]):
         self.BP = BP
         time.sleep(2)
@@ -139,12 +139,16 @@ class Robot():
             self.BP.set_motor_power(port, directionality * l_pow)
         for port, directionality in zip(RIGHT_MOTOR_PORTS, RIGHT_MOTOR_DIRECTIONALITY):
             self.BP.set_motor_power(port, directionality * r_pow)
-        # print(f"[MOTOR POWERS] {(l_pow, r_pow)} {'(LIMITED!)' if wasLimited else ''}")
+        print(f"[MOTOR POWERS] {(l_pow, r_pow)} {'(LIMITED!)' if wasLimited else ''}")
     
     def stop(self):
+        print('[STOP]')
         self.send_power_pair(0, 0)
         # self.save_data()
         self.BP.reset_all()
+    
+    def __del__(self):
+        self.stop()
 
     def save_data(self):
         save_plot("enc", self.t[:self.IDX], {'enc_l':self.encs[:self.IDX,0], 'enc_r':self.encs[:self.IDX,1]})

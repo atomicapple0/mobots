@@ -1,4 +1,5 @@
 import os
+import traceback
 import io
 import re
 import numpy as np
@@ -9,7 +10,7 @@ import socketserver
 from threading import Condition
 from http import server
 from detect_line import *
-from robot import *
+from pid import pid
 
 print("Running sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
 os.system("sudo sh ~/RPi_Cam_Web_Interface/stop.sh")
@@ -17,19 +18,16 @@ os.system("rm -f stop.txt")
 out = os.popen("ps -aux | grep raspimjpeg").read()
 for line in out.split('\n'):
     try:
-        pid = re.split('\s+', line)[1]
+        process_id = re.split('\s+', line)[1]
     except:
         continue
-    os.system("pkill %s" % pid)
-    print("pkill %s" % pid)
+    os.system("pkill %s" % process_id)
+    print("pkill %s" % process_id)
 print("\n")
 print("Starting stream at http://172.26.229.47:4444/index.html")
 
 with open("./rpi-cam-slow/index.html") as f:
     PAGE = f.read()
-
-R = Robot()
-errs = []
 
 class StreamingOutput(object):
     def __init__(self):
@@ -77,41 +75,13 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
                     self.end_headers()
+                    img = cv2.imdecode(np.fromstring(frame, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                     try:
-                        img = cv2.imdecode(np.fromstring(frame, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
                         img, blobs = detect_line(img)
-                        frame = cv2.imencode('.jpg', img)[1].tostring()
-                        # random shit here:
-                        # for blob in blobs:
-                        #     print(blob)
-                        if blobs:
-                            blob = blobs[-1]
-                            err = CENTER_COL - blob.center
-                            errs.append(err)
-
-                            if -50 < err < 50: # good zone
-                                print('straight', end=' ')
-                            elif err < 0: # we need to turn left
-                                print('left', end=' ')
-                            elif err >= 0: # we need to turn right
-                                print('right', end=' ')
-
-                            p_err = errs[-1]
-                            d_err = errs[-1] - errs[-2]
-                            i_err = sum(errs[max(len(errs)-100,0):]) / len(errs)
-
-                            k_p, k_d, k_i = 0, 0, 0
-                            k_p = 20 / 100
-                            # k_i = 1 / RESOLUTION[0] / 2
-                            # k_d = 1 / RESOLUTION[0] / 2
-                            W = k_p * p_err + k_d * d_err + k_i * i_err
-
-                            print(f'p_err: {p_err}, W: {W}')
-                            V = 25
-                            R.send_power_pair(V+W, V-W)
-
-                    except Exception as e:
-                        print(e)
+                        pid(blobs)
+                    except:
+                        print(traceback.format_exc())
+                    frame = cv2.imencode('.jpg', img)[1].tostring()
                     self.wfile.write(frame)
                     self.wfile.write(b'\r\n')
             except Exception as e:

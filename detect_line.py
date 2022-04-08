@@ -63,7 +63,8 @@ def detect_line(img):
             if sizes[i] > max_size:
                 max_label = i
                 max_size = sizes[i]
-        labels.append(max_label)
+        if max_size > 200:
+            labels.append(max_label)
 
         sizes[max_label] = -1
         max_label = 1
@@ -74,11 +75,9 @@ def detect_line(img):
                 max_size = sizes[i]
         if max_size > 500:
             labels.append(max_label)
-            
-    except Exception as e:
-        print(e)
+    except IndexError:
         pass
-
+    
     blobs = []
     for label in labels:
         blob = Blob(
