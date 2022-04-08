@@ -48,8 +48,8 @@ def detect_line(img):
     hsv = bgr2hsv(img)
     val = hsv[:,:,2]
     val = cv2.GaussianBlur(val,(11,11),0)
-    min_thresh_val = 145
-    # min_thresh_val = 130 
+    min_thresh_val = 140
+    # min_thresh_val = 120
     # min_thresh_val = 90
     thresh_val = max(otsu(val[ROW_LO-WINDOW_SIZE//2:ROW_HI+WINDOW_SIZE//2,:]), min_thresh_val)
     # print(f'thresh_val: {thresh_val}')
@@ -81,6 +81,7 @@ def detect_line(img):
                 max_size = sizes[i]
         if max_size > 500:
             labels.append(max_label)
+        print(max_size)
     except IndexError:
         pass
     
