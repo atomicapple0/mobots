@@ -2,7 +2,7 @@ import numpy as np
 from robot import *
 from detect_line import *
 
-errs = []
+errs = [0]
 R = Robot()
 
 LEFT = 0
@@ -25,7 +25,7 @@ TURNS = [LEFT, RIGHT, RIGHT, RIGHT, LEFT, RIGHT]
 # estimate pixel width of straight
 
 def pid(blobs):
-    V = 30
+    V = 25
     W = 10
     if blobs:
         blob = blobs[-1]
@@ -40,10 +40,15 @@ def pid(blobs):
         i_err = sum(errs[max(len(errs)-100,0):]) / len(errs)
 
         k_p, k_d, k_i = 0, 0, 0
-        k_p = 20 / 100
+        k_p = 50 / 100
         # k_i = 1 / RESOLUTION[0] / 2
-        # k_d = 1 / RESOLUTION[0] / 2
+        k_d = 30 / 100
         W = k_p * p_err + k_d * d_err + k_i * i_err
+        # W = np.sign(W) * min(abs(W), 40)
+
+        if abs(err) < 30:
+            V = 40
 
         # print(f'p_err: {p_err}, W: {W}')
+    print(f'VW=[{V},{W}]')
     R.send_power_pair(V+W, V-W)

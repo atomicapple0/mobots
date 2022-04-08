@@ -11,8 +11,10 @@ cv_utils.IMSHOW_MODE = cv_utils.NO_OP
 
 RESOLUTION = (320, 240)
 CENTER_COL = RESOLUTION[0] // 2
-ROW_LO = 125
-ROW_HI = 175
+# ROW_LO = 125
+# ROW_HI = 175
+ROW_LO = 25
+ROW_HI = 75
 WINDOW_SIZE = ROW_HI - ROW_LO
 
 class Blob():
@@ -44,8 +46,9 @@ def detect_line(img):
     hsv = bgr2hsv(img)
     val = hsv[:,:,2]
     val = cv2.GaussianBlur(val,(7,7),0)
-    
-    thresh_val = max(otsu(val[ROW_LO-WINDOW_SIZE//2:ROW_HI+WINDOW_SIZE//2,:]), 140)
+    # min_thresh_val = 140
+    min_thresh_val = 0
+    thresh_val = max(otsu(val[ROW_LO-WINDOW_SIZE//2:ROW_HI+WINDOW_SIZE//2,:]), min_thresh_val)
     # print(f'thresh_val: {thresh_val}')
     _, thresh = cv2.threshold(val,thresh_val,255,cv2.THRESH_BINARY)
     thresh[:ROW_LO,:] = 0

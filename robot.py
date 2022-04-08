@@ -139,7 +139,7 @@ class Robot(object):
             self.BP.set_motor_power(port, directionality * l_pow)
         for port, directionality in zip(RIGHT_MOTOR_PORTS, RIGHT_MOTOR_DIRECTIONALITY):
             self.BP.set_motor_power(port, directionality * r_pow)
-        print(f"[MOTOR POWERS] {(l_pow, r_pow)} {'(LIMITED!)' if wasLimited else ''}")
+        # print(f"[MOTOR POWERS] {(l_pow, r_pow)} {'(LIMITED!)' if wasLimited else ''}")
     
     def stop(self):
         print('[STOP]')
