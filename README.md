@@ -1,11 +1,9 @@
-# mobots
-
-1st Place Winner of 2022 CMU Mobots Race
+# 2022 CMU Mobots Race
 
 Team: Mob Rob Pog Wog Log
 
-Gate 13 in 04:11.34
+[$1000 1st Place Winner (Gate 13 in 04:11.34)](https://www.cs.cmu.edu/mobot/winners.html)
 
-https://www.youtube.com/watch?v=RN4rVmhpZew
+[![Mobots 2022](https://img.youtube.com/vi/RN4rVmhpZew/0.jpg)](https://youtu.be/RN4rVmhpZew?t=116)
 
 Based off of [RegBot](http://rsewiki.elektro.dtu.dk/index.php/Camera_based_line_follower)
